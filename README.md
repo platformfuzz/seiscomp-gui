@@ -32,7 +32,7 @@ Dependabot (weekly) can open a pin PR. For a same-day PR when GHCR gets a new `x
 
 ### GitHub App for pin PRs
 
-Create a **private** org App, install it only on this repo, then store Client ID + private key as below. The bump workflow no-ops until `SEISCOMP_BUMP_APP_CLIENT_ID` is set.
+Create a **private** org App, install it only on this repo, then store Client ID + private key as Actions secrets.
 
 1. Open [platformfuzz GitHub Apps](https://github.com/organizations/platformfuzz/settings/apps) → **New GitHub App**.
 2. **GitHub App name:** something unique, e.g. `platformfuzz-seiscomp-bump`.
@@ -46,8 +46,8 @@ Create a **private** org App, install it only on this repo, then store Client ID
 7. **Where can this GitHub App be installed?** Only on this account.
 8. **Create GitHub App**. Copy **Client ID** (not the App ID). **Generate a private key** and keep the `.pem` out of git.
 9. **Install App** → **Only select repositories** → `seiscomp-gui` → **Install**.
-10. In this repo: **Settings → Secrets and variables → Actions**
-    - Variable `SEISCOMP_BUMP_APP_CLIENT_ID` = Client ID
-    - Secret `SEISCOMP_BUMP_APP_PRIVATE_KEY` = full PEM (`-----BEGIN … PRIVATE KEY-----` through the end)
+10. In this repo: **Settings → Secrets and variables → Actions** (both as secrets, not variables)
+    - `SEISCOMP_BUMP_APP_CLIENT_ID` = Client ID
+    - `SEISCOMP_BUMP_APP_PRIVATE_KEY` = full PEM (`-----BEGIN … PRIVATE KEY-----` through the end)
 
-Do not enable org **Allow GitHub Actions to create and approve pull requests** for this. After the variable is set, **Actions → Bump seiscomp-base → Run workflow** to prove `gh pr create` as the App.
+Do not enable org **Allow GitHub Actions to create and approve pull requests** for this. After both secrets exist, **Actions → Bump seiscomp-base → Run workflow** to prove `gh pr create` as the App.
