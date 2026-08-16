@@ -1,6 +1,6 @@
 # XFCE + xrdp on seiscomp-base. RDP as sysop. Unofficial. Not gempa-supported.
 
-FROM ghcr.io/platformfuzz/seiscomp-base:7.3.1
+FROM ghcr.io/platformfuzz/seiscomp-base:7.3.2
 
 USER root
 ARG DEBIAN_FRONTEND=noninteractive
