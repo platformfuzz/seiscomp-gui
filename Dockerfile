@@ -1,0 +1,78 @@
+# XFCE + xrdp on seiscomp-base. RDP as sysop. Unofficial. Not gempa-supported.
+
+FROM ghcr.io/platformfuzz/seiscomp-base:7.3.1
+
+USER root
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+ && find /home/sysop/seiscomp/share/deps -name 'install-*.sh' -print0 \
+      | xargs -0 sed -i \
+        -e 's/apt-get install/apt-get install -y/g' \
+        -e 's/apt install/apt-get install -y/g' \
+ && bash -lc '. /home/sysop/seiscomp/share/deps/ubuntu/24.04/install-gui.sh' \
+ && apt-get install -y --no-install-recommends \
+      dbus-x11 \
+      fonts-dejavu-core \
+      libglib2.0-bin \
+      libgl1 \
+      libnotify-bin \
+      mesa-utils \
+      policykit-1 \
+      procps \
+      supervisor \
+      xfce4 \
+      xfce4-notifyd \
+      xfce4-terminal \
+      xorgxrdp \
+      xrdp \
+ && systemctl disable --now lightdm 2>/dev/null || true \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN python3 - <<'PY'
+from pathlib import Path
+p = Path("/etc/xrdp/xrdp.ini")
+text = p.read_text()
+out = []
+section = ""
+for line in text.splitlines(True):
+    if line.startswith("["):
+        section = line.strip()
+    if line.startswith("port=") and section == "[Globals]":
+        line = "port=3389\n"
+    out.append(line)
+p.write_text("".join(out))
+PY
+RUN sed -i 's/^ListenAddress=.*/ListenAddress=0.0.0.0/' /etc/xrdp/sesman.ini \
+ && (sed -i 's/^allowed_users=.*/allowed_users=anybody/' /etc/X11/Xwrapper.config || true) \
+ && adduser xrdp ssl-cert || true
+
+COPY docker/startwm.sh /etc/xrdp/startwm.sh
+COPY docker/supervisord.conf /etc/supervisor/conf.d/gui.conf
+COPY docker/entrypoint-gui.sh /docker/entrypoint-gui.sh
+COPY docker/write-runtime-config.sh /docker/write-runtime-config.sh
+COPY docker/sc-launch /home/sysop/bin/sc-launch
+COPY docker/sc-toast-event /home/sysop/bin/sc-toast-event
+COPY docker/xsession /home/sysop/.xsession
+COPY --chown=sysop:sysop config/global.cfg /home/sysop/seiscomp/etc/global.cfg
+COPY --chown=sysop:sysop config/scheli.cfg /home/sysop/seiscomp/etc/scheli.cfg
+COPY --chown=sysop:sysop config/scalert.cfg /home/sysop/seiscomp/etc/scalert.cfg
+COPY docker/write-launchers.sh /tmp/write-launchers.sh
+
+RUN chmod 0755 /etc/xrdp/startwm.sh /docker/entrypoint-gui.sh \
+      /docker/write-runtime-config.sh \
+      /home/sysop/bin/sc-launch /home/sysop/bin/sc-toast-event \
+      /home/sysop/.xsession /tmp/write-launchers.sh \
+ && bash /tmp/write-launchers.sh \
+ && printf '%s\n' \
+      'export SEISCOMP_ROOT=/home/sysop/seiscomp' \
+      'export PATH="$SEISCOMP_ROOT/bin:$PATH"' \
+      'export LD_LIBRARY_PATH="$SEISCOMP_ROOT/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' \
+      'export PYTHONPATH="$SEISCOMP_ROOT/lib/python${PYTHONPATH:+:$PYTHONPATH}"' \
+      'export QT_QPA_PLATFORM=xcb' \
+      > /etc/profile.d/seiscomp.sh \
+ && chown -R sysop:sysop /home/sysop/Desktop /home/sysop/.local \
+      /home/sysop/.config /home/sysop/bin /home/sysop/.xsession
+
+EXPOSE 3389
+ENTRYPOINT ["/docker/entrypoint-gui.sh"]
