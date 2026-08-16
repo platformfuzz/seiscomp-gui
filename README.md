@@ -25,3 +25,5 @@ docker run --rm --shm-size 2g -p 3389:3389 \
 ```bash
 docker build -t seiscomp-gui:test .
 ```
+
+The Dockerfile pins `FROM ghcr.io/platformfuzz/seiscomp-base:<x.y.z>`. A daily workflow (and Dependabot) opens a PR when GHCR publishes a newer `x.y.z` tag. Pushes to base `latest` without a new semver tag do not retag GUI. You can also run **Bump seiscomp-base** from Actions.
