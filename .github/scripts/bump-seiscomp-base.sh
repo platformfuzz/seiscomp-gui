@@ -49,15 +49,35 @@ if [[ "${open_prs}" != "0" ]]; then
   exit 0
 fi
 
+pr_body="$(cat <<EOF
+## Summary
+
+- Bump \`FROM ghcr.io/platformfuzz/seiscomp-base\` from \`${current}\` to \`${newest}\` so GUI rebuilds on the new base semver tag.
+
+## Test plan
+
+- [ ] CI docker-image-validate passes
+- [ ] After merge, GHCR \`seiscomp-gui\` publishes from the new base
+EOF
+)"
+
 if git ls-remote --exit-code origin "refs/heads/${branch}" >/dev/null 2>&1; then
-  echo "remote branch ${branch} already exists"
+  echo "remote branch ${branch} already exists; opening PR if missing"
+  gh pr create --repo "$REPO" --base main --head "$branch" \
+    --title "chore(deps): bump seiscomp-base from ${current} to ${newest}" \
+    --body "$pr_body"
   exit 0
 fi
 
 sed -i "s|^FROM ghcr.io/platformfuzz/seiscomp-base:${current}|FROM ghcr.io/platformfuzz/seiscomp-base:${newest}|" "$DOCKERFILE"
 
-git config user.name "github-actions[bot]"
-git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+if [[ -n "${APP_SLUG:-}" ]]; then
+  git config user.name "${APP_SLUG}[bot]"
+  git config user.email "${APP_SLUG}[bot]@users.noreply.github.com"
+else
+  git config user.name "github-actions[bot]"
+  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+fi
 git checkout -b "$branch"
 git add "$DOCKERFILE"
 git commit -m "$(cat <<EOF
@@ -71,14 +91,4 @@ git push -u origin HEAD
 
 gh pr create --repo "$REPO" --base main --head "$branch" \
   --title "chore(deps): bump seiscomp-base from ${current} to ${newest}" \
-  --body "$(cat <<EOF
-## Summary
-
-- Bump \`FROM ghcr.io/platformfuzz/seiscomp-base\` from \`${current}\` to \`${newest}\` so GUI rebuilds on the new base semver tag.
-
-## Test plan
-
-- [ ] CI docker-image-validate passes
-- [ ] After merge, GHCR \`seiscomp-gui\` publishes from the new base
-EOF
-)"
+  --body "$pr_body"
