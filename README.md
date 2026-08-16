@@ -49,5 +49,6 @@ Create a **private** org App, install it only on this repo, then store Client ID
 10. In this repo: **Settings → Secrets and variables → Actions** (both as secrets, not variables)
     - `SEISCOMP_BUMP_APP_CLIENT_ID` = Client ID
     - `SEISCOMP_BUMP_APP_PRIVATE_KEY` = full PEM (`-----BEGIN … PRIVATE KEY-----` through the end)
+11. Copy those two secrets onto `platformfuzz/seiscomp-base` as well. A `v*` tag there sends `repository_dispatch` `seiscomp-base-released` so this repo does not wait for the daily cron. The App only needs to stay installed on `seiscomp-gui`.
 
 Do not enable org **Allow GitHub Actions to create and approve pull requests** for this. After both secrets exist, **Actions → Bump seiscomp-base → Run workflow** to prove `gh pr create` as the App.
